@@ -1,0 +1,53 @@
+import ReactQuill from "react-quill";
+import { useState, useMemo, useRef } from "react";
+import 'react-quill/dist/quill.snow.css';
+import { storage } from "./Firebase";
+import { uploadBytes, getDownloadURL, ref } from "firebase/storage";
+
+    // 이미지 핸들러
+    const imageHandler = () => {
+        // 이미지 업로드 아이콘을 input으로 동적으로 생성
+        const input = document.createElement("input");
+        input.setAttribute("type", "file");
+        input.setAttribute("accept", "image/*");
+        input.click();
+        // 이미지 파일 클릭시 업로드 수행
+        input.addEventListener("change", async () => {
+            const file = input.files[0];
+            // 이미지 파일을 얻음
+            const quill = quillRef.current.getEditor();
+            const range = quill.getSelection(true);
+
+            // 이미지 파일이 있는지 없는지 확인 후
+            if (file) {
+                try {
+                    // 이미지 경로 생성
+                    const storageRef = ref(storage, `images/${Date.now()}`);
+                    const snapshot = await uploadBytes(storageRef, file);
+                    const url = await getDownloadURL(snapshot.ref);
+                    quill.insertEmbed(range.index, 'image', url);
+                    quill.setSelection(range.index + 1);
+                } catch (error) {
+                    console.error("Image upload failed: ", error);
+                }
+            }
+        });
+    };
+
+    const modules = useMemo(() => {
+        return {
+            toolbar: {
+                container: [
+                    [{ header: [1, 2, 3, 4, 5, 6, false] },
+                        "bold", "italic", "underline", "strike", "blockquote",
+                        { list: "ordered" }, { list: "bullet" },
+                        "link", "image", "color", "background",
+                        { align: ["right", "center", "justify"] },
+                        { size: [] }, { font: [] }],
+                ],
+                handlers: {
+                    image: imageHandler,
+                },
+            },
+        };
+    }, []);
